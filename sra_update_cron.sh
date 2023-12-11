@@ -153,7 +153,8 @@ echo "## rename sra tables @ `date` \n" >>  sra_update.log
 ## DROP TABLE `sra`.`sra_backup`;RENAME TABLE `sra`.`sra` TO `sra`.`sra_backup`; RENAME TABLE `sra`.`sra_new` TO `sra`.`sra`;
 ${mysql_dir}/mysql $db_access < scripts/sra_mv.sql  >>  sra_update.log  2>&1
 
-
+## keep a copy of sra_new.csv
+mv sra_new.csv sqlite_db
 
 #################################################
 ## generate SQLite SRAmetadb
@@ -161,13 +162,15 @@ ${mysql_dir}/mysql $db_access < scripts/sra_mv.sql  >>  sra_update.log  2>&1
 if [ -f SRAmetadb.sqlite ]; then
     rm -f SRAmetadb.sqlite
 fi
-if [ -f SRAmetadb.sqlite.gz ]; then
-    mv -f SRAmetadb.sqlite.gz sqlite_db/SRAmetadb.sqlite_`date -j  +%Y%m%d`.gz
+if [ -f sqlite_db/SRAmetadb.sqlite.gz ]; then
+    mv -f sqlite_db/SRAmetadb.sqlite.gz sqlite_db/SRAmetadb.sqlite_`date -j  +%Y%m%d`.gz
 fi
 
 echo -e "\n\n############################################" >>  sra_update.log
 echo "## Generate SRAmetadb on $(date +%c)" >>  sra_update.log;
 R --no-save < scripts/sraSQLite.R >>  sra_update.log  2>&1
+
+mv -f SRAmetadb.sqlite.gz sqlite_db/
 
 echo -e "\n\n############################################" >>  sra_update.log
 echo "## Fiish generating SRAmetadb.sqlite.gz on $(date +%c)" >>  sra_update.log
@@ -179,13 +182,14 @@ echo "## Fiish generating SRAmetadb.sqlite.gz on $(date +%c)" >>  sra_update.log
 
 echo -e "\n\n############################################" >>  sra_update.log
 echo "## Started generated SRAdb.mysqldump.gz on $(date +%c)" >>  sra_update.log
-if [ -f SRAdb.mysqldump ]; then
-    rm -f SRAdb.mysqldump
-fi
-if [ -f SRAdb.mysqldump.gz ]; then
-    mv -f SRAdb.mysqldump.gz  mysql_dump/SRAdb.mysqldump_`date -j  +%Y%m%d`.gz;
+
+if [ -f mysql_dump/SRAdb.mysqldump.gz ]; then
+    mv -f mysql_dump/SRAdb.mysqldump.gz  mysql_dump/SRAdb.mysqldump_`date -j  +%Y%m%d`.gz;
 fi
 
 ${mysql_dir}/mysqldump $db_access col_desc data_block experiment run sample sra SRA_Accessions SRA_Run_Members study submission fastq | gzip > SRAdb.mysqldump.gz
 
+mv SRAdb.mysqldump.gz mysql_dump/
+
 echo "Finished generated SRAdb.mysqldump.gz on $(date +%c)" >>  sra_update.log;
+
